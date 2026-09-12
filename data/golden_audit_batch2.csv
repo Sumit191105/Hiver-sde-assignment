@@ -1,0 +1,22 @@
+tweet_id,author_id,created_at,text,response_tweet_id,in_response_to_tweet_id,intent,confidence,human_intent
+2485653,226779,Wed Nov 15 15:54:31 +0000 2017,"@AmazonHelp @AmazonHelp  seriously.. you looted my money..
+@115821 you loosing your old costomer ..",,2485651.0,PAYMENT_BILLING,0.9,SKIP
+2437240,699162,Sun Oct 29 15:43:53 +0000 2017,@AmazonHelp La talla del fabricante de la 39 es una 6UK pero en la web no queda claro.,,2437239.0,SKIP,0.9,SKIP
+345890,198313,Sun Oct 08 03:22:00 +0000 2017,@AmazonHelp I am looking for the following game: https://t.co/PcxEP67pEf,345892,345889.0,SKIP,0.9,SKIP
+86089,134794,Thu Nov 30 14:18:05 +0000 2017,"@AmazonHelp Hi, is this completely out of stock now? I was going to order it to come tomorrow, but it now says its unavailable on the app. https://t.co/mfDaoZpdnO",86087,,SKIP,0.9,SKIP
+1993256,589895,Wed Oct 18 19:17:26 +0000 2017,@AmazonHelp Haha non rien que vous puissiez faire. Juste que je n'aurai pas mon colis demain mais plus tard malheureusement. Mais merci,1993255,1993257.0,DELIVERY_DELAY,0.9,SKIP
+1783484,535857,Tue Oct 17 23:28:21 +0000 2017,@115850 @118702 Your cust srvc tells me that there is no cash back offer on my order. They called me a liar. Order number: 171-5714352-0245145 @AmazonHelp,"1786537,1786538,1786539",1783483.0,PAYMENT_BILLING,0.9,SKIP
+752969,299947,Wed Oct 11 14:35:56 +0000 2017,@AmazonHelp I've never bought anything on Amazon Prime.,,752968.0,PRIME_MEMBERSHIP,0.9,SKIP
+1206946,325962,Wed Oct 25 08:51:40 +0000 2017,@AmazonHelp Product arrives late and with defect. Customer service sends noone despite of launching complqint,1206943,1206947.0,CUSTOMER_SERVICE_ESCALATION,0.9,PRODUCT_TECHNICAL
+1246859,412530,Thu Oct 26 01:12:49 +0000 2017,"@AmazonHelp 2/CS said driver attempted delivery, but I’ve been home all evening with no doorbell or knock. CS insisted I was wrong.",,1246857.0,CUSTOMER_SERVICE_ESCALATION,0.9,DELIVERY_NOT_RECEIVED
+585646,258276,Sun Dec 03 15:16:01 +0000 2017,@AmazonHelp Thanks for relying. It says it's still in Philly. It's been there since yesterday. The delivery is now scheduled from Dec. 3-5. I may have to call customer service to push back my delivery. I need to be home to receive those packages 😕,585648,585645.0,ORDER_STATUS,0.9,DELIVERY_DELAY
+1741810,207103,Tue Nov 07 18:09:05 +0000 2017,"@AmazonHelp I have told you the issue I am facing, not only I many are facing the same issue.","1741812,1741813",1741809.0,CUSTOMER_SERVICE_ESCALATION,0.9,CUSTOMER_SERVICE_ESCALATION
+277188,182224,Sat Oct 14 15:31:31 +0000 2017,@AmazonHelp where is your chat function? https://t.co/KVYgr9g1Dk,277189,277187.0,CUSTOMER_SERVICE_ESCALATION,0.9,CUSTOMER_SERVICE_ESCALATION
+1953370,579937,Thu Nov 16 12:27:24 +0000 2017,"@AmazonHelp This is there reply, they arent frozen funds https://t.co/qdVGjHxf5n",,1953369.0,PAYMENT_BILLING,0.9,SKIP
+2300777,667759,Sun Nov 12 17:25:37 +0000 2017,@AmazonHelp Yeah I was supposed to get two things today but I only got one package,2300774,2300781.0,DELIVERY_NOT_RECEIVED,0.9,ORDER_STATUS
+2236268,280741,Fri Nov 10 18:37:18 +0000 2017,@AmazonHelp Problèmé lié à Adblock,2236267,2236269.0,PRODUCT_TECHNICAL,0.9,SKIP
+527729,242158,Sun Dec 03 13:43:50 +0000 2017,@AmazonHelp Et ne mettez pas un champ Téléphone dans votre formulaire qui est obligatoire quand personne de chez vous nous rappelle.,,527727.0,CUSTOMER_SERVICE_ESCALATION,0.9,SKIP
+486738,227782,Fri Dec 01 15:36:00 +0000 2017,I remember when Amazon Prime used to mean next day delivery @AmazonHelp https://t.co/k26e1dzBkd,486737,,DELIVERY_DELAY,0.9,DELIVERY_DELAY
+970281,350255,Sun Oct 22 07:48:43 +0000 2017,@AmazonHelp #Amazon_Prime is a scam.,,970279.0,SKIP,0.9,CUSTOMER_SERVICE_ESCALATION
+1460534,421899,Thu Nov 02 21:19:53 +0000 2017,Toujours en train d'attendre le livreur d'amazon.. poke @AmazonHelp,"1460532,1460536",,DELIVERY_DELAY,0.9,SKIP
+280207,182724,Fri Oct 06 10:06:40 +0000 2017,"@AmazonHelp You're promising fake services, no satisfaction, the statement will be sorted within 24-48 hours . Tired of this #Sasikala #ICAN #Notoamazon",,280205.0,CUSTOMER_SERVICE_ESCALATION,0.9,CUSTOMER_SERVICE_ESCALATION
