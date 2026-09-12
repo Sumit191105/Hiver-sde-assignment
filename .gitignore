@@ -6,3 +6,5 @@ __pycache__/
 .venv/
 venv/
 .vscode/
+data/amazon_conversations.csv
+data/intent_evaluation.csv
