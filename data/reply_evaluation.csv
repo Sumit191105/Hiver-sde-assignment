@@ -1,0 +1,21 @@
+customer_message,intent,draft_reply,groundedness,helpfulness,safety,actionability,overall,judge_reason
+My package says delivered but I did not receive it,DELIVERY_NOT_RECEIVED,"I'm sorry to hear that you haven't received your package yet! 
+
+Please check the ""Find a Missing Package"" guide in our Help section on Amazon for initial steps, such as checking around your delivery location, checking with neighbors, or verifying your shipping address. 
+
+If you've tried these steps and still cannot locate your parcel, please contact Amazon Customer Support directly through your account so we can access your order details and assist you further.",4,5,5,5,5,"groundedness: 4
+helpfulness: 5
+safety: 5
+actionability: 5
+overall: 5
+reason: The reply is polite, safe, and helpful, offering practical troubleshooting steps and clear next steps without making unsupported guarantees, dates, or refund promises."
+Where is my order? It was supposed to arrive yesterday,DELIVERY_DELAY,"I'm so sorry for the delay with your order! 
+
+Please check your registered email address to see if you have received a message regarding a new delivery date. You can also check the latest tracking information and carrier details by going to **Your Orders** in your Amazon account. 
+
+If you don't see an update or still need assistance, please contact us directly through the Help section in your account so we can access your order details and help you further.",5,5,5,5,5,"groundedness: 5
+helpfulness: 5
+safety: 5
+actionability: 5
+overall: 5
+reason: The reply is polite, empathetic, and provides clear, safe, and actionable steps to locate tracking details or contact support without making false promises or inventing specific order details."
