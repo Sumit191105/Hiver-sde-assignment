@@ -377,7 +377,7 @@ The system has a **clear support intent** + **relevant historical evidence**, an
 
 ## 14. Reply Quality Evaluation
 
-Reply quality was evaluated using an LLM-as-judge rubric across four dimensions:
+Reply quality was evaluated using an LLM-as-judge rubric across four quality dimensions, plus an overall score:
 
 | Dimension | Question |
 |---|---|
@@ -401,6 +401,20 @@ Based on **2 completed examples**:
 | **Overall** | **5.00 / 5** |
 
 > These scores are only an initial smoke-test style evaluation because the sample size is very small. They should **not** be interpreted as evidence that the system consistently achieves 5/5 quality.
+
+### Human vs. LLM Judge Agreement
+
+A small 2-case human audit was performed on the same reply-quality rubric.
+
+| Dimension | Exact Agreement |
+|---|---:|
+| Groundedness | 100% |
+| Helpfulness | 100% |
+| Safety | 100% |
+| Actionability | 100% |
+| Overall | 100% |
+
+The human ratings exactly matched the LLM judge on both evaluated replies. Because this audit contains only two cases, this should be treated as a small sanity check rather than evidence of broad judge reliability.
 
 ---
 
@@ -496,7 +510,9 @@ hiver-sde-assignment/
 │   ├── training_sample.csv
 │   ├── golden_set.csv
 │   ├── golden_set_labeled.csv
-│   └── golden_audit.csv
+│   ├── golden_audit.csv
+│   ├── reply_evaluation.csv
+│   └── reply_human_audit.csv
 │
 ├── src/
 │   ├── inspect_data.py
@@ -517,7 +533,8 @@ hiver-sde-assignment/
 │   ├── gemini_intent_classifier.py
 │   ├── agent.py
 │   ├── evaluate_intents.py
-│   └── evaluate_replies.py
+│   ├── evaluate_replies.py
+│   └── create_reply_human_audit.py
 │
 ├── .gitignore
 └── README.md
