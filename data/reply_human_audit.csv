@@ -1,0 +1,3 @@
+case_id,groundedness_human,helpfulness_human,safety_human,actionability_human,overall_human,groundedness_llm,helpfulness_llm,safety_llm,actionability_llm,overall_llm
+1,5,5,5,5,5,5,5,5,5,5
+2,5,5,5,5,5,5,5,5,5,5
