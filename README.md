@@ -1,728 +1,718 @@
-# Hiver SDE Intern — AI Customer Support Agent
+````markdown
+# AmazonHelp AI Support Agent
 
-An AI-powered customer support system built using the **Customer Support on Twitter** dataset.
+An AI-powered customer support agent built using the Customer Support on Twitter dataset.
 
-The goal of this project is to build and evaluate an AI support agent for a single brand that can:
+The system is designed to take a customer support message, identify its intent, retrieve historically similar AmazonHelp conversations, draft a grounded response, and decide whether the case can be auto-handled or should be escalated to a human.
 
-1. Classify incoming customer messages into a small set of intents.
-2. Retrieve relevant historical customer-support interactions.
-3. Draft a response grounded in how the brand historically handled similar issues.
-4. Decide whether the request can be auto-handled or should be escalated to a human.
-5. Evaluate the system using a manually reviewed golden evaluation set.
+> **Important:** This project focuses on demonstrating the complete AI support workflow and evaluating its behavior on a small, reproducible subset of the full dataset rather than training on the entire dataset.
 
 ---
 
-# 1. Problem Framing
+## 1. Problem
 
-Customer-support conversations on Twitter are noisy, short, informal, and often lack context.
+Customer support systems receive large numbers of messages covering repetitive issues such as:
 
-For this project, the selected brand is **AmazonHelp**.
+- Delivery delays
+- Missing deliveries
+- Order tracking
+- Returns and refunds
+- Payment and billing problems
+- Account access
+- Prime membership
+- Product/device problems
+- Requests for human support
 
-The system is designed to answer a practical question:
+The goal of this project is to build a small AI support agent that can:
 
-> Given a new Amazon customer-support message, can we understand the customer's problem, find relevant historical examples, generate a grounded response, and decide whether automation is safe?
-
-## What "Good" Means
-
-A good support agent should:
-
-- Correctly understand the customer's intent.
-- Retrieve relevant historical support interactions.
-- Generate responses that are consistent with historical resolutions.
-- Avoid inventing information that is not supported by retrieved evidence.
-- Handle straightforward and common issues automatically.
-- Escalate uncertain, sensitive, or repeatedly unresolved issues.
-- Provide a reason whenever a conversation is escalated.
-
-## What We Chose Not to Build
-
-The initial version intentionally does not attempt to:
-
-- Build a production-scale customer-support platform.
-- Process the complete ~3M tweet dataset at inference time.
-- Automatically perform real-world actions such as refunds or order cancellations.
-- Replace human agents completely.
-- Build a general-purpose chatbot for every brand.
-- Support every possible customer-support issue.
-- Treat every short Twitter message as independently understandable.
-
-The focus is on demonstrating a reliable and measurable AI support workflow for one brand.
+1. Classify the customer's message into a defined support intent.
+2. Retrieve historically similar AmazonHelp conversations.
+3. Generate a response grounded in those historical examples.
+4. Decide whether to automatically handle the request or escalate it to a human.
+5. Provide a reason for the routing decision.
 
 ---
 
-# 2. Project Workflow
+## 2. What I Chose
 
-The project is developed in the following stages:
+### Brand
 
-```mermaid
-flowchart TD
+**AmazonHelp**
 
-    A[Customer Support on Twitter Dataset]
-    --> B[Dataset Inspection]
+AmazonHelp was selected because it had the largest number of support-authored tweets in the sampled brand analysis.
 
-    B --> C[Brand Analysis]
+### Why this matters
 
-    C --> D[Select AmazonHelp]
+Instead of building a generic chatbot, the system learns from the way the selected brand historically responded to customers.
 
-    D --> E[Extract AmazonHelp Conversations]
-
-    E --> F[Explore Customer Messages]
-
-    F --> G[Create 5,000 Message Sample]
-
-    G --> H[Define Intent Taxonomy]
-
-    H --> I[Create 200 Message Golden Set]
-
-    I --> J[Human Review / Labeling]
-
-    J --> K[Intent Classification]
-
-    K --> L[Retrieve Similar Historical Interactions]
-
-    L --> M[Grounded Response Generation]
-
-    M --> N[Auto-Handle vs Escalate]
-
-    N --> O[Evaluation]
-
-    O --> P[Failure Analysis]
-
-    P --> Q[Final Report]
-```
+This allows the generated response to be grounded in real historical support interactions.
 
 ---
 
-# 3. AI Support Agent Architecture
-
-The final AI support workflow is designed as:
-
-```mermaid
-flowchart LR
-
-    A[Customer Message]
-
-    A --> B[Intent Classifier]
-
-    B --> C[Intent + Query]
-
-    C --> D[Historical Interaction Retrieval]
-
-    D --> E[Relevant AmazonHelp Examples]
-
-    E --> F[LLM Response Generator]
-
-    F --> G[Draft Response]
-
-    G --> H[Decision Engine]
-
-    H --> I[Auto-Handle]
-
-    H --> J[Human Escalation]
-
-    J --> K[Escalation Reason]
-```
-
-## Main Components
-
-### 1. Intent Classification
-
-The incoming customer message is classified into one of the predefined support intents.
-
-### 2. Historical Retrieval
-
-Relevant historical AmazonHelp interactions are retrieved from the dataset.
-
-This provides grounding for the response generation stage.
-
-### 3. Response Generation
-
-The LLM receives:
-
-- Customer message
-- Predicted intent
-- Relevant historical interactions
-
-and generates a support response grounded in the retrieved evidence.
-
-### 4. Decision Engine
-
-The system decides whether to:
-
-```text
-AUTO-HANDLE
-```
-
-or:
-
-```text
-ESCALATE TO HUMAN
-```
-
-The decision includes a reason.
-
----
-
-# 4. Dataset
+# 3. Dataset
 
 The project uses the **Customer Support on Twitter** dataset.
 
-The dataset contains approximately 3 million tweets from customer-support conversations between customers and brands.
+Dataset:
 
-Each tweet contains information such as:
+https://www.kaggle.com/datasets/thoughtvector/customer-support-on-twitter
 
-- Tweet ID
-- Author ID
-- Whether the tweet is inbound
-- Creation timestamp
-- Tweet text
-- Response tweet ID
-- Parent tweet ID
+The original dataset contains approximately 3 million tweets from customer-support conversations involving multiple brands.
 
-The dataset contains multi-turn conversations and is intentionally noisy.
+Important fields include:
 
-## Dataset Handling
+- `tweet_id`
+- `author_id`
+- `inbound`
+- `created_at`
+- `text`
+- `response_tweet_id`
+- `in_response_to_tweet_id`
 
-The complete dataset is not committed to GitHub because of its large size.
+For this project:
 
-Instead, the project uses:
-
-- A selected brand
-- A sampled subset for development
-- A smaller golden evaluation set
-
-This keeps experimentation fast and reproducible.
+- `inbound=True` is treated as a customer message.
+- `inbound=False` is treated as a support/brand response.
+- Tweet relationships are used to connect customer messages with historical support responses.
 
 ---
 
-# 5. Brand Selection
+# 4. Data Processing
 
-Multiple brands were analyzed using the support-authored tweets in the dataset.
+The full dataset was not loaded into the model training pipeline.
 
-AmazonHelp was selected because it has a substantially larger number of support-authored tweets than the other analyzed brands.
-
-This provides enough historical support interactions for:
-
-- Intent discovery
-- Retrieval
-- Response grounding
-- Evaluation
-
----
-
-# 6. Intent Taxonomy
-
-The initial taxonomy contains the following intents:
-
-| Intent | Description |
-|---|---|
-| `DELIVERY_DELAY` | Order is late, delayed, or expected delivery time was missed |
-| `DELIVERY_NOT_RECEIVED` | Tracking says delivered but customer did not receive the package |
-| `ORDER_STATUS` | Customer asks about order location, tracking, ETA, or delivery status |
-| `RETURN_REFUND` | Return, refund, replacement, damaged/wrong item issues where return/refund is the main concern |
-| `ACCOUNT_ACCESS` | Login, password, locked, suspended, or account-access/security issues |
-| `PRIME_MEMBERSHIP` | Prime subscription, renewal, cancellation, benefits, or Prime-specific charges |
-| `PAYMENT_BILLING` | Payment, card, bank transaction, duplicate charge, billing, gift card, or money/charge dispute |
-| `PRODUCT_TECHNICAL` | Technical issues involving Amazon devices, apps, websites, or product functionality |
-| `CUSTOMER_SERVICE_ESCALATION` | Customer requests human/manager support or reports a repeated unresolved issue |
-| `SKIP` | Irrelevant, extremely vague, simple thanks, link-only, tag-only, or messages that do not clearly fit the taxonomy |
-
-The taxonomy may be revised after human review if the data shows that important categories are missing or poorly separated.
-
----
-
-# 7. Data Preparation Pipeline
-
-The current preprocessing pipeline contains several stages.
-
-## Dataset Inspection
-
-```bash
-python src/inspect_data.py
-```
-
-Used to inspect:
-
-- Dataset structure
-- Columns
-- Data types
-- Missing values
-- Sample records
-
-## Brand Analysis
-
-```bash
-python src/brand_analysis.py
-```
-
-Analyzes support-authored tweets and identifies brands with sufficient historical support data.
-
-## Brand Extraction
-
-```bash
-python src/extract_brand.py
-```
-
-Extracts AmazonHelp-related customer-support interactions.
-
-## Customer Message Exploration
-
-```bash
-python src/view_customer_messages.py
-```
-
-Used to inspect customer messages and identify recurring support issues.
-
-## Training Sample
-
-```bash
-python src/create_training_sample.py
-```
-
-Creates a 5,000-message development sample.
-
-## Training Sample Inspection
-
-```bash
-python src/inspect_training_sample.py
-```
-
-Used to manually inspect the sampled messages.
-
----
-
-# 8. Golden Evaluation Set
-
-A 200-message golden evaluation set was created from the sampled customer messages.
+Instead, the workflow was:
 
 ```text
-Golden set size: 200 messages
-```
+Full Customer Support on Twitter dataset
+                |
+                v
+        AmazonHelp filtering
+                |
+                v
+       Customer/support pairs
+                |
+                v
+      Training / retrieval sample
+                |
+                v
+       Evaluation / golden set
+````
 
-The purpose of the golden set is to provide a fixed evaluation dataset that can be used to compare:
+### Dataset statistics used in this project
 
-- Trivial baseline
-- Simple baseline
-- Final AI support system
+| Stage                               |    Size |
+| ----------------------------------- | ------: |
+| AmazonHelp support-authored tweets  | 169,840 |
+| AmazonHelp filtered rows            | 280,231 |
+| Customer → historical support pairs | 103,274 |
+| Training sample                     |   5,000 |
+| Golden evaluation sample            |     200 |
+| Human-verified audit examples       |      89 |
 
-## Sampling
-
-The golden set is sampled from the customer-message development sample using a fixed random seed.
-
-This makes the evaluation reproducible.
-
-## Labeling
-
-The initial labeling pipeline uses Gemini for batch-assisted classification.
-
-However, the final golden labels will be manually reviewed because the assignment requires a **hand-labelled evaluation set**.
-
-The goal is to ensure that the golden set represents human judgment rather than blindly treating an LLM prediction as ground truth.
-
----
-
-# 9. Gemini-Based Batch Labeling
-
-Gemini is currently used to assist with intent labeling.
-
-The labeling script processes messages in batches rather than sending one API request per message.
-
-```bash
-python src/auto_label_golden_set.py
-```
-
-The script:
-
-1. Loads the golden set.
-2. Detects previously labeled messages.
-3. Sends only unlabeled messages to Gemini.
-4. Classifies them into the defined intent categories.
-5. Stores a confidence score.
-6. Saves progress after every successful batch.
-7. Stops safely if an API error or quota limit occurs.
-8. Continues from the existing output when run again.
-
-This makes the labeling process resilient to API interruptions.
+The original full dataset is intentionally excluded from Git because of its large size.
 
 ---
 
-# 10. Retrieval / RAG Component
+# 5. System Architecture
 
-The core grounding mechanism will retrieve historical AmazonHelp interactions that are similar to the incoming customer message.
-
-Conceptually:
+The complete system follows this pipeline:
 
 ```text
-New Customer Message
-        |
-        v
-   Query Processing
-        |
-        v
- Historical Interaction Search
-        |
-        v
- Top-K Similar Conversations
-        |
-        v
- Historical Resolutions
-        |
-        v
-       LLM
+Customer Message
+       |
+       v
++----------------------+
+| Intent Classification|
+|      Gemini          |
++----------+-----------+
+           |
+           v
+       Intent
+           |
+           v
++----------------------+
+| Historical Retrieval |
+|      TF-IDF          |
++----------+-----------+
+           |
+           v
+ Similar customer/support
+      conversations
+           |
+           v
++----------------------+
+| Response Generation  |
+|       Gemini         |
++----------+-----------+
+           |
+           v
+      Draft Reply
+           |
+           v
++----------------------+
+| Routing Decision     |
+| Auto-handle/Escalate |
++----------------------+
+           |
+           v
+      Final Agent Output
 ```
-
-The retrieval system should prefer historical examples that are:
-
-- Semantically similar
-- Relevant to the predicted intent
-- From the same brand
-- Associated with useful support responses
-
-The retrieved interactions will be passed to the response generator as evidence.
 
 ---
 
-# 11. Grounded Response Generation
+# 6. Supported Intents
 
-The response generator will receive the customer message together with retrieved historical support examples.
+The current system uses 10 support intents.
+
+| Intent                        | Description                                                         |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `DELIVERY_DELAY`              | Order is late or delivery is delayed                                |
+| `DELIVERY_NOT_RECEIVED`       | Tracking says delivered but customer did not receive it             |
+| `ORDER_STATUS`                | Customer asks where an order is or requests tracking/ETA            |
+| `RETURN_REFUND`               | Return, refund, replacement, damaged or wrong item issues           |
+| `ACCOUNT_ACCESS`              | Login, password, account lock or account security problems          |
+| `PRIME_MEMBERSHIP`            | Prime subscription, renewal, cancellation or Prime benefits         |
+| `PAYMENT_BILLING`             | Payments, cards, billing, duplicate charges or money-related issues |
+| `PRODUCT_TECHNICAL`           | Problems with Amazon devices, apps or product functionality         |
+| `CUSTOMER_SERVICE_ESCALATION` | Customer explicitly requests human/manager support or escalation    |
+| `SKIP`                        | Irrelevant, vague, non-support or unusable messages                 |
+
+---
+
+# 7. Intent Classification
+
+Two approaches were implemented.
+
+## 7.1 Simple Baseline
+
+The first baseline uses:
+
+```text
+Character TF-IDF
+        +
+Logistic Regression
+```
+
+Character n-grams are used to make the baseline more tolerant of spelling variations and short customer messages.
+
+### Baseline result
+
+Evaluation was performed on **89 human-verified examples**.
+
+| Metric      | Result |
+| ----------- | -----: |
+| Accuracy    |  29.2% |
+| Macro F1    |  15.1% |
+| Weighted F1 |  22.7% |
+
+The baseline performs reasonably on common categories such as `SKIP`, but struggles with lower-frequency intents.
+
+This provided a useful reference point for evaluating the semantic/LLM approach.
+
+---
+
+# 8. Gemini Intent Classifier
+
+The second classifier uses Gemini with a constrained intent definition.
+
+The model receives:
+
+```text
+Customer message
++
+Intent definitions
+```
+
+and is instructed to return only one of the supported intent names.
 
 Example:
 
 ```text
 Customer:
-"My package says delivered but I never received it."
+"My package says delivered but I did not receive it"
 
-Predicted Intent:
+Output:
 DELIVERY_NOT_RECEIVED
-
-Historical Examples:
-- Similar customer issue + AmazonHelp response
-- Similar customer issue + AmazonHelp response
-- Similar customer issue + AmazonHelp response
 ```
 
-The LLM then generates a response based on the available evidence.
+### Current evaluation snapshot
 
-The system should avoid:
+The Gemini classifier was evaluated on the currently available evaluated subset.
 
-- Unsupported claims
-- Invented policies
-- Invented refund amounts
-- Invented delivery dates
-- Pretending that an action has already been performed
+| Metric             | Result |
+| ------------------ | -----: |
+| Evaluated examples |     13 |
+| Accuracy           |  46.2% |
+| Macro F1           |  29.0% |
+| Weighted F1        |  47.6% |
+
+This is an **early evaluation snapshot**, not a final estimate of production performance.
+
+The small evaluation size means these numbers should not be interpreted as statistically stable.
 
 ---
 
-# 12. Auto-Handle vs Human Escalation
+# 9. Golden Evaluation Set
 
-The system will also make an operational decision.
+A 200-example golden set was created by sampling customer messages.
 
-## Auto-Handle
+The initial labels were generated using Gemini-based weak labeling across the 10 defined intents.
 
-A message may be automatically handled when:
+### Important labeling note
 
-- Intent confidence is sufficiently high.
-- Retrieved historical evidence is relevant.
-- The issue is a common support problem.
-- The generated response is grounded.
-- There is no strong reason for human intervention.
+The 200 examples should **not** be described as independently hand-labelled.
 
-## Escalate
+Instead:
 
-A message should be escalated when:
+* 200 examples were sampled for the golden evaluation set.
+* Initial labels were produced using an LLM-assisted labeling process.
+* 89 examples were subsequently reviewed and verified by a human.
+* The 89 human-verified examples are therefore the strongest manually checked subset currently available.
 
-- Intent confidence is low.
-- Relevant historical evidence cannot be found.
-- The customer reports a repeatedly unresolved issue.
-- The customer explicitly requests a human or manager.
-- The issue appears sensitive or ambiguous.
-- The system cannot generate a sufficiently grounded response.
+This distinction is important because using LLM-generated labels as if they were independent human ground truth would inflate confidence in the evaluation.
+
+---
+
+# 10. Historical Retrieval
+
+The system retrieves similar historical AmazonHelp conversations before generating a response.
+
+The retrieval system uses:
+
+```text
+TF-IDF
++
+Word n-grams (1,2)
++
+Cosine similarity
+```
+
+The system retrieves the top 3 historical customer/support examples.
+
+Each retrieved example contains:
+
+```text
+Historical customer message
+        +
+Historical AmazonHelp response
+```
+
+The retrieved examples are then provided to the response-generation model as evidence.
+
+---
+
+# 11. Response Generation
+
+Gemini generates the draft response using:
+
+1. The current customer message.
+2. The detected intent.
+3. Retrieved historical AmazonHelp examples.
+
+The response-generation prompt instructs the model to:
+
+* Stay grounded in historical evidence.
+* Avoid inventing policies.
+* Avoid inventing refunds or guarantees.
+* Avoid inventing delivery dates.
+* Avoid claiming actions that were not actually performed.
+* Provide practical next steps.
+* Escalate to Amazon Support when account/order-specific information is required.
+
+---
+
+# 12. Example
+
+### Customer
+
+```text
+My package says delivered but I did not receive it
+```
+
+### Detected intent
+
+```text
+DELIVERY_NOT_RECEIVED
+```
+
+### Retrieved evidence
+
+The system retrieved three historically similar AmazonHelp conversations.
+
+Top similarity:
+
+```text
+0.511
+```
+
+### Generated response
+
+```text
+I'm sorry to hear that you haven't received your package yet!
+
+Please check the "Find a Missing Package" guide in our Help section on Amazon for initial steps, such as checking around your delivery location, checking with neighbors, or verifying your shipping address.
+
+If you've tried these steps and still cannot locate your parcel, please contact Amazon Customer Support directly through your account so we can access your order details and assist you further.
+```
+
+### Routing
+
+```text
+AUTO_HANDLE
+```
+
+### Reason
+
+```text
+A clear support intent and relevant historical evidence were found.
+```
+
+---
+
+# 13. Auto-Handle vs Escalation
+
+The system uses explicit routing rules.
+
+## Escalate when:
+
+### 1. Customer explicitly asks for human support
+
+```text
+CUSTOMER_SERVICE_ESCALATION
+```
 
 Example:
 
 ```text
-Decision: ESCALATE
+I want to speak to a real person.
+```
+
+Result:
+
+```text
+ESCALATE
+```
 
 Reason:
-The customer reports a repeatedly unresolved issue and
-explicitly requests further human assistance.
+
+```text
+Customer explicitly requested human customer support.
 ```
 
 ---
 
-# 13. Evaluation Strategy
-
-The assignment emphasizes proving that the system works rather than only building the system.
-
-Evaluation will therefore compare the final system against simple baselines.
-
-## Baseline 1 — Trivial Baseline
-
-Always predict the most frequent intent in the golden set.
-
-This establishes a minimum performance level.
-
-## Baseline 2 — Simple Keyword Baseline
-
-Use manually defined keyword rules for common intents.
-
-Example:
+### 2. No clear support intent
 
 ```text
-"late", "delayed"
-        -> DELIVERY_DELAY
-
-"delivered but"
-        -> DELIVERY_NOT_RECEIVED
-
-"refund", "return"
-        -> RETURN_REFUND
-
-"payment", "charged", "card"
-        -> PAYMENT_BILLING
+SKIP
 ```
 
-This provides a simple non-LLM comparison.
-
-## Final System
-
-The final system will combine:
+Result:
 
 ```text
-Intent Classification
-        +
-Historical Retrieval
-        +
-Grounded Response Generation
-        +
-Escalation Decision
+ESCALATE
+```
+
+Reason:
+
+```text
+Message does not contain a clear support intent.
 ```
 
 ---
 
-# 14. Evaluation Metrics
+### 3. Historical evidence is too weak
 
-## Intent Classification
+If the best retrieved historical example has a similarity below the configured threshold:
 
-Metrics:
+```text
+ESCALATE
+```
 
-- Accuracy
-- Macro F1
-- Per-intent precision
-- Per-intent recall
-- Confusion matrix
+Reason:
 
-Macro F1 is particularly useful because some intents may occur much less frequently than others.
+```text
+Historical evidence is not sufficiently similar.
+```
 
-## Retrieval
+---
 
-Potential metrics:
+## Auto-handle when:
 
-- Recall@K
-- Precision@K
-- Relevance of retrieved historical interactions
+The system has:
 
-## Response Quality
+```text
+Clear support intent
++
+Relevant historical evidence
+```
 
-The generated responses will be evaluated using an LLM-as-judge rubric.
+and the case does not trigger an escalation rule.
 
-The judge will evaluate dimensions such as:
+The current implementation only drafts a response. It does **not** actually modify orders, issue refunds, access accounts, or perform transactions.
+
+---
+
+# 14. Reply Quality Evaluation
+
+Reply quality was evaluated using an LLM-as-judge rubric.
+
+The judge evaluates four dimensions:
 
 ### Groundedness
 
-Does the response remain consistent with the retrieved historical evidence?
+Is the response supported by the retrieved historical evidence?
 
 ### Helpfulness
 
-Does it address the customer's actual problem?
+Does the response address the customer's actual problem?
 
-### Relevance
+### Safety
 
-Does it avoid unnecessary information?
-
-### Correctness
-
-Does it avoid unsupported or contradictory claims?
+Does the response avoid unsupported promises, invented actions, or risky instructions?
 
 ### Actionability
 
-Does it provide a useful next step when appropriate?
+Does the customer receive clear next steps?
 
----
-
-# 15. LLM-as-Judge
-
-A separate LLM evaluation step will score generated responses using a fixed rubric.
-
-Example:
+Each dimension is scored from:
 
 ```text
-Groundedness: 1-5
-Helpfulness: 1-5
-Relevance: 1-5
-Correctness: 1-5
-Actionability: 1-5
+1 = poor
+5 = excellent
 ```
-
-The judge will not be treated as perfect ground truth.
-
-A subset of responses will also be reviewed by a human.
-
-The goal is to measure how well the automated judge agrees with human judgment.
 
 ---
 
-# 16. Human vs LLM Judge Agreement
+## Current Reply Evaluation Snapshot
 
-A sample of generated responses will be independently evaluated by a human using the same rubric.
+The current automated evaluation contains **2 completed examples**.
 
-The project will compare:
+| Metric        |    Score |
+| ------------- | -------: |
+| Groundedness  | 4.50 / 5 |
+| Helpfulness   | 5.00 / 5 |
+| Safety        | 5.00 / 5 |
+| Actionability | 5.00 / 5 |
+| Overall       | 5.00 / 5 |
+
+These scores are only an initial smoke-test style evaluation because the sample size is very small.
+
+They should **not** be interpreted as evidence that the system consistently achieves 5/5 quality.
+
+---
+
+# 15. What Is Misleading About My Headline Number?
+
+A headline such as:
 
 ```text
-Human Evaluation
-       vs
-LLM-as-Judge
+5.0/5 reply quality
 ```
 
-Possible agreement measurements include:
+would be misleading if presented without context.
 
-- Exact agreement
-- Mean absolute score difference
-- Correlation
-- Agreement on acceptable/unacceptable responses
+The current score comes from only **2 evaluated replies**, and the judge itself is an LLM.
 
-The final report will document the observed agreement.
+Therefore:
 
----
+* The sample is too small for a reliable quality estimate.
+* LLM-as-judge scores can contain evaluator bias.
+* The current evaluation does not establish production-level performance.
+* A larger human-reviewed evaluation set is required before making strong claims.
 
-# 17. Results
-
-Final evaluation results will be added after the complete pipeline has been implemented.
-
-| System | Intent Accuracy | Macro F1 | Response Score | Escalation Quality |
-|---|---:|---:|---:|---:|
-| Trivial Baseline | TBD | TBD | TBD | TBD |
-| Keyword Baseline | TBD | TBD | TBD | TBD |
-| Final AI Agent | TBD | TBD | TBD | TBD |
-
-No performance numbers are reported until they have been measured on the final reviewed golden set.
+The purpose of the current result is to demonstrate that the evaluation pipeline works, not to claim that the agent has solved customer support.
 
 ---
 
-# 18. Failure Analysis
+# 16. Failure Modes
 
-The final evaluation will identify the top five failure modes.
+The main failure modes identified during development are:
 
-For each failure mode, the report will contain:
+## 1. Ambiguous customer messages
 
-1. Real example
-2. Expected behavior
-3. Actual behavior
-4. Why the system failed
-5. Hypothesis
-6. Possible improvement
+Some messages do not contain enough context to confidently determine the customer's intent.
 
-Potential failure categories to investigate include:
+### Example
 
-- Very short/context-dependent messages
-- Overlapping intents
-- Incorrect retrieval
-- Insufficient historical evidence
-- Ambiguous customer requests
+```text
+Can you help me with this?
+```
 
-These will only be included as final failure modes if supported by actual evaluation examples.
+### Hypothesis
+
+The message requires conversation context that is not available from a single tweet.
 
 ---
 
-# 19. What Is Misleading About My Headline Number?
+## 2. Overlap between delivery intents
 
-This is a mandatory part of the evaluation.
+`DELIVERY_DELAY`, `ORDER_STATUS`, and `DELIVERY_NOT_RECEIVED` can be difficult to distinguish.
 
-A high headline metric can hide important weaknesses.
+For example:
 
-For example, overall accuracy can be misleading if:
+```text
+Where is my package? It should have arrived yesterday.
+```
 
-- One intent dominates the dataset.
-- `SKIP` represents a large proportion of examples.
-- Easy examples dominate the golden set.
-- Short or context-dependent messages are underrepresented.
-- The evaluation set is small.
-- The model performs poorly on rare intents.
-- Response quality is not captured by classification accuracy.
+This can look like both:
 
-Therefore, the final report will present the headline number together with:
+```text
+ORDER_STATUS
+```
 
-- Macro F1
-- Per-intent performance
-- Failure examples
-- Response-quality scores
-- Human-vs-LLM judge agreement
+and:
 
----
+```text
+DELIVERY_DELAY
+```
 
-# 20. Decision Log
+### Hypothesis
 
-Important non-obvious project decisions will be documented here.
-
-### Decision 1 — Select AmazonHelp
-
-AmazonHelp was selected because it provides a large historical support dataset suitable for retrieval and evaluation.
-
-### Decision 2 — Use a Small Intent Taxonomy
-
-A limited number of intents was chosen to keep classification practical and interpretable.
-
-### Decision 3 — Add SKIP
-
-Some Twitter messages are too vague, irrelevant, or lack enough context to classify reliably. These are assigned to `SKIP`.
-
-### Decision 4 — Use a Development Sample
-
-The complete dataset is large, so a smaller sample is used during development.
-
-### Decision 5 — Create a Fixed Golden Set
-
-A fixed 200-message evaluation set allows repeatable comparison between different system versions.
-
-### Decision 6 — Save Labeling Progress
-
-The Gemini labeling pipeline saves progress after each batch so API failures do not destroy previous work.
-
-### Decision 7 — Human Review of Golden Labels
-
-LLM-generated labels are treated as assistance rather than unquestioned ground truth.
-
-### Decision 8 — Use Historical Support Interactions for Grounding
-
-Historical AmazonHelp conversations provide evidence for response generation.
-
-### Decision 9 — Include an Escalation Path
-
-The system should not attempt to automatically answer every customer issue.
-
-### Decision 10 — Compare Against Simple Baselines
-
-A system is only useful if it improves over simple alternatives.
-
-### Decision 11 — Evaluate Response Quality Separately
-
-A correct intent prediction does not guarantee a good customer-support response.
-
-### Decision 12 — Evaluate the LLM Judge
-
-The LLM judge itself is evaluated against human ratings instead of being treated as perfect.
+The intent definitions need clearer boundaries and potentially hierarchical classification.
 
 ---
 
-# 21. Current Project Structure
+## 3. SKIP dominates the sampled dataset
+
+A significant portion of sampled messages are short, irrelevant, vague, or difficult to categorize.
+
+This can make accuracy misleading because a classifier can gain credit by performing well on the dominant class.
+
+### Hypothesis
+
+Evaluation should report macro-F1 and per-class results rather than accuracy alone.
+
+---
+
+## 4. Historical retrieval can return superficially similar examples
+
+TF-IDF similarity is based on lexical overlap.
+
+Two messages can share words while having different support requirements.
+
+### Hypothesis
+
+A semantic embedding-based retriever could improve retrieval quality.
+
+---
+
+## 5. LLM response generation can overgeneralize
+
+Even with retrieved evidence, an LLM can potentially generate policies, guarantees, or actions that were not present in the evidence.
+
+### Mitigation
+
+The generation prompt explicitly prohibits:
+
+* Invented refunds
+* Invented policies
+* Invented dates
+* Unsupported guarantees
+* Claims that an action was completed
+
+The escalation mechanism also reduces risk when evidence is weak.
+
+---
+
+# 17. What I Would Build Next Week
+
+If given another week, I would focus on evaluation quality and retrieval before adding more product features.
+
+### 1. Expand the human-labelled evaluation set
+
+Increase the manually verified set from 89 examples toward the required 150–250 range.
+
+### 2. Improve intent definitions
+
+Create clearer decision boundaries between similar categories such as:
+
+```text
+ORDER_STATUS
+DELIVERY_DELAY
+DELIVERY_NOT_RECEIVED
+```
+
+### 3. Replace TF-IDF retrieval with embeddings
+
+Use semantic embeddings to retrieve historical conversations based on meaning rather than only lexical overlap.
+
+### 4. Add confidence calibration
+
+Instead of only using a similarity threshold, combine:
+
+```text
+Intent confidence
++
+Retrieval confidence
++
+Intent risk
+```
+
+to determine whether the agent should auto-handle a case.
+
+### 5. Improve evaluation
+
+Use:
+
+* Human reply-quality ratings.
+* LLM-as-judge ratings.
+* Agreement analysis between human and LLM judges.
+* Per-intent metrics.
+* Retrieval metrics.
+
+### 6. Add conversation context
+
+Instead of classifying a single tweet, provide previous messages in the same thread.
+
+This would help with ambiguous messages and multi-turn support conversations.
+
+---
+
+# 18. What I Would NOT Build
+
+The goal is not to build a full Amazon customer-service replacement.
+
+I would not attempt to build:
+
+* Real Amazon order management.
+* Real refunds.
+* Real payment processing.
+* Real account authentication.
+* A production customer-support dashboard.
+* A fully autonomous agent with unrestricted actions.
+
+Those systems require access control, security, auditing, business rules, and production integrations that are outside the scope of this assignment.
+
+The focus here is:
+
+```text
+Intent
++
+Evidence
++
+Draft response
++
+Safe routing
++
+Evaluation
+```
+
+---
+
+# 19. Project Structure
 
 ```text
 hiver-sde-assignment/
 │
 ├── data/
+│   ├── twcs.csv
+│   ├── amazon_help.csv
+│   ├── training_sample.csv
 │   ├── golden_set.csv
 │   ├── golden_set_labeled.csv
-│   └── training_sample.csv
+│   └── golden_audit.csv
 │
 ├── src/
 │   ├── inspect_data.py
@@ -735,247 +725,382 @@ hiver-sde-assignment/
 │   ├── create_golden_set.py
 │   ├── label_golden_set.py
 │   ├── auto_label_golden_set.py
-│   └── gemini_test.py
+│   ├── gemini_test.py
+│   ├── intent_classifier.py
+│   ├── extract_conversations.py
+│   ├── retriever.py
+│   ├── response_generator.py
+│   ├── gemini_intent_classifier.py
+│   ├── agent.py
+│   ├── evaluate_intents.py
+│   └── evaluate_replies.py
 │
 ├── .gitignore
 └── README.md
 ```
 
-Additional files and directories will be added as the retrieval, generation, decision, and evaluation components are implemented.
+Large raw/generated files are excluded from Git where appropriate.
 
 ---
 
-# 22. Setup
+# 20. Main Components
+
+## `brand_analysis.py`
+
+Analyzes the dataset and identifies support-heavy brands.
+
+---
+
+## `extract_brand.py`
+
+Extracts AmazonHelp-related tweets from the full dataset.
+
+---
+
+## `extract_conversations.py`
+
+Builds customer → historical support-response pairs.
+
+---
+
+## `retriever.py`
+
+Implements TF-IDF-based historical conversation retrieval.
+
+---
+
+## `gemini_intent_classifier.py`
+
+Classifies customer messages into the supported intent set using Gemini.
+
+---
+
+## `response_generator.py`
+
+Generates a grounded customer-support draft using retrieved historical evidence.
+
+---
+
+## `agent.py`
+
+Combines the complete pipeline:
+
+```text
+Intent
+→ Retrieval
+→ Response
+→ Routing
+```
+
+---
+
+## `intent_classifier.py`
+
+Implements the classical TF-IDF + Logistic Regression baseline.
+
+---
+
+## `evaluate_intents.py`
+
+Evaluates intent predictions using:
+
+* Accuracy
+* Macro F1
+* Weighted F1
+* Per-class performance
+
+---
+
+## `evaluate_replies.py`
+
+Evaluates generated replies using an LLM-as-judge rubric.
+
+---
+
+# 21. Setup
 
 ## Requirements
 
-- Python 3.x
-- pandas
-- Google Gemini API access
+* Python 3.10+
+* Gemini API key
+* Dataset downloaded from Kaggle
 
 Install dependencies:
 
 ```bash
-pip install pandas google-genai
+pip install pandas numpy scikit-learn google-genai
 ```
 
-## Gemini API Key
+---
+
+# 22. Gemini API Key
 
 Set the API key as an environment variable.
 
 ### Windows PowerShell
 
 ```powershell
-$env:GEMINI_API_KEY="your_api_key"
+$env:GEMINI_API_KEY="YOUR_API_KEY"
 ```
 
-Verify that the variable exists:
+### Linux / macOS
 
-```powershell
-if ($env:GEMINI_API_KEY) {
-    echo "API key loaded successfully"
-} else {
-    echo "API key NOT found"
-}
+```bash
+export GEMINI_API_KEY="YOUR_API_KEY"
 ```
 
-Never commit an API key to GitHub.
+Never commit the API key to Git.
 
 ---
 
 # 23. Running the Project
 
-## Inspect Dataset
+From the project root:
 
 ```bash
 python src/inspect_data.py
 ```
 
-## Analyze Brands
+Run brand analysis:
 
 ```bash
 python src/brand_analysis.py
 ```
 
-## Extract AmazonHelp Data
+Extract AmazonHelp data:
 
 ```bash
 python src/extract_brand.py
 ```
 
-## Explore Customer Messages
+Create historical conversation pairs:
 
 ```bash
-python src/view_customer_messages.py
+python src/extract_conversations.py
 ```
 
-## Create Training Sample
+Create a training sample:
 
 ```bash
 python src/create_training_sample.py
 ```
 
-## Inspect Training Sample
-
-```bash
-python src/inspect_training_sample.py
-```
-
-## Create Golden Set
+Create the golden set:
 
 ```bash
 python src/create_golden_set.py
 ```
 
-## Run Gemini Batch Labeling
+---
+
+# 24. Run the Agent
+
+The main agent is implemented in:
+
+```text
+src/agent.py
+```
+
+The pipeline is:
+
+```text
+Customer message
+        ↓
+Gemini intent classification
+        ↓
+TF-IDF historical retrieval
+        ↓
+Gemini response generation
+        ↓
+Auto-handle / escalate decision
+```
+
+Example input:
+
+```text
+My package says delivered but I did not receive it
+```
+
+Expected type of output:
+
+```text
+Intent:
+DELIVERY_NOT_RECEIVED
+
+Action:
+AUTO_HANDLE
+
+Reason:
+A clear support intent and relevant historical evidence were found.
+
+Draft:
+A grounded customer-support response based on
+historical AmazonHelp conversations.
+```
+
+---
+
+# 25. Evaluation
+
+Run intent evaluation:
 
 ```bash
-python src/auto_label_golden_set.py
+python src/evaluate_intents.py
 ```
 
-The labeling process saves progress after each successful batch.
+Run reply evaluation:
 
-If the API quota or another temporary error is reached, the script can be run again later and will continue with the remaining unlabeled messages.
+```bash
+python src/evaluate_replies.py
+```
+
+Evaluation outputs are cached in the `data/` directory so that completed API calls do not need to be repeated.
 
 ---
 
-# 24. Reproducibility
+# 26. Reproducibility
 
-The project uses fixed random seeds for dataset sampling.
+The project is designed to be reproducible on a small subset of the original dataset.
 
-This allows the development sample and golden set to be reproduced consistently.
+The full dataset is approximately 500+ MB and contains millions of tweets, so it is intentionally not committed to the repository.
 
-The original large dataset is intentionally excluded from GitHub.
-
-A user reproducing the project should:
-
-1. Download the Customer Support on Twitter dataset.
-2. Place the dataset at:
+To reproduce the main workflow:
 
 ```text
-data/twcs.csv
+1. Download dataset
+2. Place twcs.csv in data/
+3. Install dependencies
+4. Set GEMINI_API_KEY
+5. Run the preprocessing scripts
+6. Run the agent
+7. Run the evaluation scripts
 ```
 
-3. Install the required Python dependencies.
-4. Configure the Gemini API key.
-5. Run the pipeline scripts in order.
-
-The final README will be updated with the exact commands required to reproduce the headline evaluation results in under 15 minutes.
+The system uses cached intermediate files where possible to reduce repeated API calls.
 
 ---
 
-# 25. Privacy and Secrets
+# 27. Limitations
 
-API credentials must never be committed to the repository.
+This prototype has several limitations.
 
-The project uses environment variables for API credentials.
+### Small human evaluation set
 
-Large raw dataset files are also excluded from Git using `.gitignore`.
+Only 89 examples have currently been human-verified.
 
----
+The assignment's target of 150–250 independently hand-labelled examples has therefore not yet been fully reached.
 
-# 26. Limitations
+### Weakly labelled examples
 
-Current limitations include:
+The initial 200-example golden set used LLM-assisted labels.
 
-- Twitter messages can be extremely short and context-dependent.
-- Historical conversations may contain incomplete information.
-- Intent categories are manually designed and may not cover every issue.
-- Historical responses may themselves contain inconsistencies.
-- Retrieval quality directly affects response quality.
-- LLM-generated responses require evaluation before being trusted.
-- Automated escalation decisions should be conservative.
-- The development dataset is a sample rather than the complete dataset.
+These should not be treated as equivalent to independent human annotations.
 
----
+### Small reply evaluation
 
-# 27. What I Would Do With One More Week
+Only two reply examples are currently included in the automated reply-quality evaluation.
 
-With an additional week, I would focus on:
+Therefore the current 5/5 result is a pipeline demonstration rather than a statistically meaningful quality estimate.
 
-1. Improving retrieval quality.
-2. Testing different embedding/retrieval strategies.
-3. Improving intent boundaries using confusion-matrix analysis.
-4. Adding conversation-level context instead of relying only on individual tweets.
-5. Improving escalation rules using evaluation data.
-6. Increasing human evaluation coverage.
-7. Calibrating confidence thresholds.
-8. Testing response generation with multiple retrieved examples.
-9. Adding automated regression tests.
-10. Evaluating robustness on unseen customer-support messages.
+### LLM dependence
 
----
+The Gemini classifier and response generator depend on an external API.
 
-# 28. Project Status
+### Retrieval limitations
 
-### Completed
+TF-IDF retrieval relies on lexical similarity and can miss semantically similar messages with different wording.
 
-- [x] Dataset inspection
-- [x] Brand analysis
-- [x] AmazonHelp selected
-- [x] AmazonHelp data extraction
-- [x] Customer message exploration
-- [x] 5,000-message development sample
-- [x] Initial intent taxonomy
-- [x] 200-message golden evaluation set
-- [x] Gemini batch-labeling pipeline
-- [x] Progress-safe labeling pipeline
+### No real customer actions
 
-### In Progress
+The agent does not actually:
 
-- [ ] Complete golden-set labeling
-- [ ] Human verification of golden labels
-- [ ] Historical interaction retrieval
-- [ ] RAG pipeline
-- [ ] Grounded response generation
-- [ ] Auto-handle vs escalation decision engine
-- [ ] Evaluation harness
-- [ ] LLM-as-judge
-- [ ] Human vs LLM judge agreement
-- [ ] Baseline comparison
-- [ ] Failure analysis
-- [ ] Final report
+* Modify orders
+* Issue refunds
+* Change accounts
+* Process payments
+* Contact customers
+
+It only produces a draft response and routing recommendation.
 
 ---
 
-# 29. Final Goal
+# 28. Decision Log
 
-The final system should demonstrate the following complete workflow:
+The following decisions shaped the implementation.
+
+|  # | Decision                                                           |
+| -: | ------------------------------------------------------------------ |
+|  1 | Selected AmazonHelp as the target brand                            |
+|  2 | Used historical customer/support pairs as grounding evidence       |
+|  3 | Limited the system to 10 intents                                   |
+|  4 | Built a classical TF-IDF + Logistic Regression baseline            |
+|  5 | Added Gemini for semantic intent classification                    |
+|  6 | Used TF-IDF retrieval as a simple interpretable retrieval baseline |
+|  7 | Retrieved the top 3 historical conversations                       |
+|  8 | Used retrieved historical responses as generation evidence         |
+|  9 | Added explicit escalation rules                                    |
+| 10 | Escalated messages without a clear intent                          |
+| 11 | Escalated when historical evidence was weak                        |
+| 12 | Added an LLM-as-judge reply evaluation                             |
+| 13 | Cached evaluation results to reduce repeated API calls             |
+| 14 | Kept raw large dataset files out of Git                            |
+| 15 | Avoided claiming weak/LLM labels were independent human labels     |
+
+---
+
+# 29. Summary
+
+This project demonstrates a complete AI customer-support workflow:
 
 ```text
-Customer Message
-       |
-       v
-Intent Classification
-       |
-       v
-Historical AmazonHelp Retrieval
-       |
-       v
-Relevant Historical Resolutions
-       |
-       v
-Grounded LLM Response
-       |
-       v
-Auto-Handle / Escalate
-       |
-       +-------------------+
-       |                   |
-       v                   v
-   Auto-Handle          Human Agent
-       |
-       v
-Customer Response
+             CUSTOMER MESSAGE
+                    |
+                    v
+          +------------------+
+          | Intent Classifier |
+          +------------------+
+                    |
+                    v
+               INTENT
+                    |
+                    v
+          +------------------+
+          | Historical Search|
+          +------------------+
+                    |
+                    v
+           SUPPORT EVIDENCE
+                    |
+                    v
+          +------------------+
+          | Response Generator|
+          +------------------+
+                    |
+                    v
+              DRAFT REPLY
+                    |
+                    v
+          +------------------+
+          | Routing Decision |
+          +------------------+
+             /            \
+            /              \
+           v                v
+     AUTO-HANDLE         ESCALATE
 ```
 
-The primary goal is not simply to achieve a high metric.
+The main engineering focus was not simply generating text, but connecting:
 
-The goal is to demonstrate that the system can:
+**classification → historical evidence → grounded generation → safe routing → evaluation.**
 
-- Understand customer problems
-- Use historical evidence
-- Generate grounded responses
-- Make safe automation decisions
-- Explain failures
-- And provide measurable evidence that the system works
+The current results demonstrate that the pipeline works end-to-end, while the evaluation limitations are explicitly documented rather than hidden.
+
+````
+
+
+
+
+
+
+
+
